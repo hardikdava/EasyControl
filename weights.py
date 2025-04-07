@@ -5,8 +5,6 @@ import shutil
 import subprocess
 import time
 
-from loguru import logger
-
 
 def download_weights(url, dest, file=False):
     start = time.time()
@@ -126,11 +124,11 @@ class WeightsDownloadCache:
         :param dest: Path to store weights file.
         :param file: If True, download the file as is, otherwise extract it.
         """
-        logger.debug("Ensuring enough disk space...")
+        print("Ensuring enough disk space...")
         while not self._has_enough_space() and len(self.lru_paths) > 0:
             self._remove_least_recent()
 
-        logger.info(f"Downloading weights: {url}")
+        print(f"Downloading weights: {url}")
 
         call_args = ["pget", "-x", url, dest]
         if file:
@@ -142,7 +140,7 @@ class WeightsDownloadCache:
             output = subprocess.check_output(call_args, close_fds=True)
         except subprocess.CalledProcessError as e:
             # If download fails, clean up and re-raise exception
-            logger.debug(e.output)
+            print(e.output)
             self._rm_disk(dest)
             raise e
-        logger.info(f"Downloaded weights in {time.time() - st} seconds")
+        print(f"Downloaded weights in {time.time() - st} seconds")
