@@ -82,7 +82,7 @@ class BasePredictor:
                 )
                 adapter_name = names[count]
                 lora_local_paths.append(lora_path)
-                lora_weights.append(lora_scales[count])
+                lora_weights.append([lora_scales[count]])
                 count += 1
 
             elif hf_lora.endswith(".safetensors"):
@@ -94,7 +94,7 @@ class BasePredictor:
                     continue
                 adapter_name = names[count]
                 lora_local_paths.append(lora_path)
-                lora_weights.append(lora_scales[count])
+                lora_weights.append([lora_scales[count]])
                 count += 1
             else:
                 print(f"Downloading LoRA weights from - Replicate URL: {hf_lora}")
@@ -104,7 +104,7 @@ class BasePredictor:
                 )
                 adapter_name = names[count]
                 lora_local_paths.append(lora_path)
-                lora_weights.append(lora_scales[count])
+                lora_weights.append([lora_scales[count]])
                 count += 1
 
             t2 = time.time()
