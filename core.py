@@ -2,7 +2,6 @@ import time
 from pathlib import Path
 from typing import Optional, Union, Tuple
 
-from diffusers.utils import load_image
 from PIL import Image
 import supervision as sv
 import torch
@@ -18,17 +17,8 @@ MODEL_URL = (
     "https://weights.replicate.delivery/default/black-forest-labs/FLUX.1-dev/files.tar"
 )
 
-def clear_cache(transformer):
-    for name, attn_processor in transformer.attn_processors.items():
-        attn_processor.bank_kv.clear()
-
-
 control_models = {
-    "canny": "canny.safetensors",
-    "depth": "depth.safetensors",
-    "hedsketch": "hedsketch.safetensors",
     "pose": "pose.safetensors",
-    "seg": "seg.safetensors",
     "inpainting": "inpainting.safetensors",
     "subject": "subject.safetensors",
 }
@@ -97,6 +87,10 @@ class EasyControl(BasePredictor):
         path = control_models["pose"]
         set_single_lora(self.pipes["pose"].transformer, path, lora_weights=[1], cond_size=512)
 
+    def clear_cache(self):
+        for name, attn_processor in self.pipes["pose"].transformer.attn_processors.items():
+            attn_processor.bank_kv.clear()
+
     def predict(self,
                 control_image_path: Union[str, Path],
                 prompt: str,
@@ -108,7 +102,7 @@ class EasyControl(BasePredictor):
                 height: int = 1024,
                 ):
         start_time = time.time()
-        spatial_image = load_image(control_image_path, letterbox=False)
+        spatial_image = Image.open(control_image_path)
         results = self.pipes["pose"](
             prompt,
             height=height,
@@ -116,7 +110,7 @@ class EasyControl(BasePredictor):
             guidance_scale=guidance_scale,
             num_inference_steps=num_inference_steps,
             max_sequence_length=512,
-            generator=torch.Generator("cpu").manual_seed(5),
+            generator=torch.Generator("cpu").manual_seed(seed),
             spatial_images=[spatial_image],
             subject_images=[],
             cond_size=512,
@@ -125,5 +119,5 @@ class EasyControl(BasePredictor):
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
         # Clear cache after generation
-        clear_cache(self.pipes["pose"].transformer)
+        self.clear_cache()
         return results
