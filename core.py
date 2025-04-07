@@ -125,5 +125,5 @@ class EasyControl(BasePredictor):
         end_time = time.time()
         print(f"Time taken: {end_time - start_time} seconds")
         # Clear cache after generation
-        clear_cache(self.pipe["pose"].transformer)
+        clear_cache(self.pipes["pose"].transformer)
         return results
