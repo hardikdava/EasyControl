@@ -59,6 +59,14 @@ class CogPredictor(BasePredictor):
                 ge=0,
                 le=50
             ),
+            lora_weights: List[str] = Input(
+                description="Huggingface path, or URL to the LoRA weights. Ex: alvdansen/frosting_lane_flux",
+                default=[],
+            ),
+            lora_scales: List[float] = Input(
+                description="Determines how strongly the main LoRA should be applied. Sane results between 0 and 1 for base inference. For go_fast we apply a 1.5x multiplier to this value; we've generally seen good performance when scaling the base value by that amount. You may still need to experiment to find the best value for your particular lora.",
+                default=[],
+            ),
             seed: int = Input(
                 description="Random seed. Set for reproducible generation",
                 default=42
@@ -92,6 +100,8 @@ class CogPredictor(BasePredictor):
         outputs = self.predictor.predict(
             prompt=prompt,
             control_image_path=control_image,
+            lora_scales=lora_scales,
+            lora_weights=lora_weights,
             guidance_scale=guidance_scale,
             num_inference_steps=num_inference_steps,
             width=width,

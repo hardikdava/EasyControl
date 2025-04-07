@@ -1,15 +1,14 @@
 import time
 from pathlib import Path
-from typing import Optional, Union, Tuple
+from typing import Optional, Union
 
 from PIL import Image
-import supervision as sv
 import torch
 
 from base import BasePredictor
 from src.pipeline import FluxPipeline
 from src.transformer_flux import FluxTransformer2DModel
-from src.lora_helper import set_single_lora
+from src.lora_helper import set_single_lora, set_multi_lora
 
 MODEL_CACHE = "FLUX.1-dev"
 MODEL_NAME = "black-forest-labs/FLUX.1-dev"
@@ -38,30 +37,6 @@ ASPECT_RATIOS = {
 }
 
 
-def load_image(
-    image_path: Union[Path, str, Image.Image],
-    resolution_wh: Tuple[int, int] = [1024, 1024],
-    letterbox: bool = True,
-) -> Image:
-    """
-    Load image with letterbox functionality
-    Returns:
-        object:
-    """
-
-    if isinstance(image_path, (str, Path)):
-        img_pil = Image.open(image_path)
-    else:
-        img_pil = image_path
-    # apply letterbox to image
-    if letterbox:
-        img_cv = sv.pillow_to_cv2(img_pil)
-        img_cv = sv.letterbox_image(img_cv, resolution_wh)
-        print(f"letterbox applied to image with resolution {resolution_wh}")
-        img_pil = sv.cv2_to_pillow(img_cv)
-    return img_pil
-
-
 class EasyControl(BasePredictor):
 
     def __init__(self):
@@ -70,8 +45,7 @@ class EasyControl(BasePredictor):
         """
         super().__init__()
 
-        self.pipes = {}
-        self.pipes["pose"] = FluxPipeline.from_pretrained(
+        self.pipe = FluxPipeline.from_pretrained(
             MODEL_CACHE,
             torch_dtype=torch.bfloat16
         )
@@ -81,14 +55,14 @@ class EasyControl(BasePredictor):
             torch_dtype=torch.bfloat16,
             device="cuda"
         )
-        self.pipes["pose"].transformer = transformer
-        self.pipes["pose"].to("cuda")
+        self.pipe.transformer = transformer
+        self.pipe.to("cuda")
 
         path = control_models["pose"]
-        set_single_lora(self.pipes["pose"].transformer, path, lora_weights=[1], cond_size=512)
+        set_single_lora(self.pipe.transformer, path, lora_weights=[1], cond_size=512)
 
     def clear_cache(self):
-        for name, attn_processor in self.pipes["pose"].transformer.attn_processors.items():
+        for name, attn_processor in self.pipe.transformer.attn_processors.items():
             attn_processor.bank_kv.clear()
 
     def predict(self,
@@ -97,13 +71,28 @@ class EasyControl(BasePredictor):
                 guidance_scale: float = 3.5,
                 num_inference_steps: int = 30,
                 seed: Optional[int] = None,
+                lora_weights: Optional[Union[str, list]] = None,
+                lora_scales: Optional[Union[float, list]] = None,
                 num_outputs: int = 1,
                 width: int = 1024,
                 height: int = 1024,
                 ):
+        lora_paths, lora_weights = self.load_loras(
+            hf_loras=lora_weights,
+            lora_scales=lora_scales,
+        )
+        lora_paths.insert(0, control_models["pose"])
+        lora_weights.insert(0, [1])
+        set_multi_lora(
+            self.pipe.transformer,
+            lora_paths,
+            lora_weights=lora_weights,
+            cond_size=512,
+        )
+
         start_time = time.time()
         spatial_image = Image.open(control_image_path)
-        results = self.pipes["pose"](
+        results = self.pipe(
             prompt,
             height=height,
             width=width,
