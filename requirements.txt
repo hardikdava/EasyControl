@@ -12,6 +12,5 @@ transformers==4.49.0
 cog
 peft
 numpy==1.26.4
-huggingface-hub==0.24.5
 opencv-python==4.10.0.84
 supervision==0.25.0
