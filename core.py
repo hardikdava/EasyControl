@@ -77,20 +77,11 @@ class EasyControl(BasePredictor):
                 width: int = 1024,
                 height: int = 1024,
                 ):
-        lora_paths, lora_weights = self.load_loras(
-            hf_loras=lora_weights,
-            lora_scales=lora_scales,
-        )
-        lora_paths.insert(0, control_models["pose"])
-        lora_weights.insert(0, [1])
-        set_multi_lora(
-            self.pipe.transformer,
-            lora_paths,
-            lora_weights=lora_weights,
-            cond_size=512,
-        )
-
         start_time = time.time()
+        # load dev lora
+        self.load_loras(
+            hf_loras=lora_weights, lora_scales=lora_scales
+        )
         spatial_image = Image.open(control_image_path)
         results = self.pipe(
             prompt,
