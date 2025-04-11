@@ -68,7 +68,7 @@ class EasyControl(BasePredictor):
         set_single_lora(self.pipe.transformer, path, lora_weights=[1], cond_size=512)
 
     def set_subject_pose_lora(self):
-        paths = [control_models["subject"], control_models["inpainting"]]
+        paths = [control_models["subject"], control_models["subject"]]
         set_multi_lora(self.pipe.transformer, paths, lora_weights=[[1], [1]], cond_size=512)
 
     def clear_cache(self):
