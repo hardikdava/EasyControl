@@ -103,6 +103,7 @@ class CogPredictor(BasePredictor):
 
         outputs = self.predictor.predict(
             prompt=prompt,
+            subject_image_path=subject_image,
             control_image_path=control_image,
             lora_scales=lora_scales,
             lora_weights=lora_weights,
