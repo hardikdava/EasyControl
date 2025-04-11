@@ -44,6 +44,10 @@ class CogPredictor(BasePredictor):
                 description="Prompt",
                 default="A person wearing a dress",
             ),
+            subject_image: Path = Input(
+                description="Subject image",
+                default=None
+            ),
             control_image: Path = Input(
                 description="Control image",
                 default=None

@@ -58,14 +58,25 @@ class EasyControl(BasePredictor):
         self.pipe.transformer = transformer
         self.pipe.to("cuda")
 
+
+    def set_pose_lora(self):
         path = control_models["pose"]
         set_single_lora(self.pipe.transformer, path, lora_weights=[1], cond_size=512)
+
+    def set_subject_lora(self):
+        path = control_models["subject"]
+        set_single_lora(self.pipe.transformer, path, lora_weights=[1], cond_size=512)
+
+    def set_subject_pose_lora(self):
+        paths = [control_models["subject"], control_models["inpainting"]]
+        set_multi_lora(self.pipe.transformer, paths, lora_weights=[[1], [1]], cond_size=512)
 
     def clear_cache(self):
         for name, attn_processor in self.pipe.transformer.attn_processors.items():
             attn_processor.bank_kv.clear()
 
     def predict(self,
+                subject_image_path: Union[str, Path],
                 control_image_path: Union[str, Path],
                 prompt: str,
                 guidance_scale: float = 3.5,
@@ -78,11 +89,28 @@ class EasyControl(BasePredictor):
                 height: int = 1024,
                 ):
         start_time = time.time()
-        # load dev lora
+        spatial_images = []
+        if subject_image_path is None and control_image_path is not None:
+            self.set_pose_lora()
+            spatial_image = Image.open(control_image_path).convert("RGB")
+            spatial_images.append(spatial_image)
+        elif subject_image_path is not None and control_image_path is None:
+            self.set_subject_lora()
+            subject_image = Image.open(subject_image_path).convert("RGB")
+            spatial_images.append(subject_image)
+        elif subject_image_path is not None and control_image_path is not None:
+            self.set_subject_pose_lora()
+            subject_image = Image.open(subject_image_path).convert("RGB")
+            spatial_image = Image.open(control_image_path).convert("RGB")
+            spatial_images.append(spatial_image)
+            spatial_images.append(subject_image)
+        else:
+            raise ValueError("At least one of subject_image_path or control_image_path must be provided.")
+
+        # load custom dev lora
         self.load_loras(
             hf_loras=lora_weights, lora_scales=lora_scales
         )
-        spatial_image = Image.open(control_image_path)
         results = self.pipe(
             prompt,
             height=height,
@@ -90,10 +118,11 @@ class EasyControl(BasePredictor):
             guidance_scale=guidance_scale,
             num_inference_steps=num_inference_steps,
             max_sequence_length=512,
-            generator=torch.Generator("cpu").manual_seed(seed),
-            spatial_images=[spatial_image],
+            generator=torch.Generator("cuda").manual_seed(seed),
+            spatial_images=spatial_images,
             subject_images=[],
             cond_size=512,
+            num_images_per_prompt=num_outputs,
         ).images
 
         end_time = time.time()
