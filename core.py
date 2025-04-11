@@ -102,8 +102,8 @@ class EasyControl(BasePredictor):
             self.set_subject_pose_lora()
             subject_image = Image.open(subject_image_path).convert("RGB")
             spatial_image = Image.open(control_image_path).convert("RGB")
-            spatial_images.append(spatial_image)
             spatial_images.append(subject_image)
+            spatial_images.append(spatial_image)
         else:
             raise ValueError("At least one of subject_image_path or control_image_path must be provided.")
 
