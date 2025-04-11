@@ -90,6 +90,7 @@ class EasyControl(BasePredictor):
                 ):
         start_time = time.time()
         spatial_images = []
+        subject_images = []
         if subject_image_path is None and control_image_path is not None:
             self.set_pose_lora()
             spatial_image = Image.open(control_image_path).convert("RGB")
@@ -97,12 +98,12 @@ class EasyControl(BasePredictor):
         elif subject_image_path is not None and control_image_path is None:
             self.set_subject_lora()
             subject_image = Image.open(subject_image_path).convert("RGB")
-            spatial_images.append(subject_image)
+            subject_images.append(subject_image)
         elif subject_image_path is not None and control_image_path is not None:
             self.set_subject_pose_lora()
             subject_image = Image.open(subject_image_path).convert("RGB")
             spatial_image = Image.open(control_image_path).convert("RGB")
-            spatial_images.append(subject_image)
+            subject_images.append(subject_image)
             spatial_images.append(spatial_image)
         else:
             raise ValueError("At least one of subject_image_path or control_image_path must be provided.")
@@ -119,8 +120,8 @@ class EasyControl(BasePredictor):
             num_inference_steps=num_inference_steps,
             max_sequence_length=512,
             generator=torch.Generator("cuda").manual_seed(seed),
+            subject_images=subject_images,
             spatial_images=spatial_images,
-            subject_images=[],
             cond_size=512,
             num_images_per_prompt=num_outputs,
         ).images
